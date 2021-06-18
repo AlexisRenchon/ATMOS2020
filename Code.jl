@@ -28,7 +28,12 @@ axislegend(ax1, position = :rt)
 fig[1,1] = ax1
 fig
 
+# to do, recreate interactive figure for 2020, using csv dataset
+# add daily normal distribution of soil moisture, soil temp and modeled/measured soil resp
+# add menu and many things...
 
-
-
+# Idea for manuscript: 
+# Model Rsoil with DAMM using ANN estimated distributions of Tsoil and SWC
+# --> show how it perform better than using a single value of Tsoil and SWC
+# --> suggest to use it for ESM/LSM subgrids
 
