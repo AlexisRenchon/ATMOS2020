@@ -15,10 +15,10 @@ Rsoil = Dep_var = d.RSM_Exp_Flux_76
 Ind_var = hcat(Tsoil, SWC)
 
 # porosity, the 5th param, has to be bigger than max SWC
-porosity = maximum(SWC) + 0.001
+porosity = maximum(SWC) + 0.01
 lb = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # params can't be negative
-ub = [Inf, Inf, Inf, Inf, Inf, Inf]
-p = Param_ini = [1e8, 59, 3.46e-8, 2.0e-3, porosity, 0.0125] 
+ub = [Inf, Inf, Inf, Inf, porosity, Inf]
+p = Param_ini = [1e7, 59, 3.46e-8, 2.0e-3, porosity, 0.0125] 
 output1 = DAMM(Ind_var, p)
 
 # Fit DAMM parameters to data,
@@ -36,9 +36,9 @@ p3D = scatter!(ax3D, Tsoil, SWC, Rsoil, markersize = 5000, color = :black)
 p3Dm = scatter!(ax3D, Tsoil, SWC, Modeled_data, markersize = 5000, color = :red)
 
 
-L = 22 # resolution
+L = 25 # resolution
 x = collect(range(1, length=L, stop=1))
-[append!(x, collect(range(i, length=L, stop=i))) for i = 2:22]
+[append!(x, collect(range(i, length=L, stop=i))) for i = 2:25]
 x = reduce(vcat,x)
 y = collect(range(0, length=L, stop=porosity))
 y = repeat(y, outer=L)
