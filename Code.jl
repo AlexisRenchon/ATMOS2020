@@ -4,8 +4,10 @@ data = DataFrame(CSV.File("Input/2020_v1.csv"))
 
 # to do, plot histogram and density, fit normal, show average and std
 
+# in space
 test = Float64.(Vector(data[1, 2:65])) 
-
+# in time
+#test = Float64.(Vector(data[:, 2]))
 
 # fit normal to data
 d = fit(Normal, test)

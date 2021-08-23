@@ -14,8 +14,9 @@ function DAMM(x, p)
      	Eaₛₓ = p[2] # Activation energy, kJ mol⁻¹
 	kMₛₓ = 1e-8*p[3] # Michaelis constant, gC cm⁻³
     	kMₒ₂ = 1e-3*p[4] # Michaelis constant for O₂, L L⁻¹
-	porosity = p[5] # 1 - soil buld density / soil particle density
-	Sxₜₒₜ = 1e-2*p[6] # Total soil carbon, gC cm⁻³
+	# porosity = p[5] # 1 - soil buld density / soil particle density
+	porosity = poro_val
+	Sxₜₒₜ = 1e-2*p[5] # Total soil carbon, gC cm⁻³
      # DAMM model
 	Vmax = @. (αₛₓ * exp(-Eaₛₓ/(R * (273.15 + Tₛ)))) # Maximum potential rate of respiration
      	Sₓ = @. pₛₓ * Sxₜₒₜ * Dₗᵢ * θ^3 # All soluble substrate, gC cm⁻³

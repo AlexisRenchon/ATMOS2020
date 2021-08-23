@@ -3,24 +3,27 @@ using DataFrames, CSV
 data = DataFrame(CSV.File("Input/2020_v1.csv"))
 
 # using DAMMmodel
-include("DAMM_scaled.jl")
+include("DAMM_scaled_porosity.jl")
 
 # get dataframe of RSM_Exp_Flux_00
 
-d = dropmissing(data, :RSM_Exp_Flux_73)
+d = dropmissing(data, :RSM_Exp_Flux_03)
+# d = dropmissing(data, :RSA_Exp_Flux_1)
 
-SWC = d.SWC_73
-Tsoil = d.Tsoil_73
-Rsoil = Dep_var = d.RSM_Exp_Flux_73
+SWC = d.SWC_03
+Tsoil = d.Tsoil_03
+
+Rsoil = Dep_var = d.RSM_Exp_Flux_03
+# Rsoil = Dep_var = d.RSA_Exp_Flux_1
 
 Ind_var = hcat(Tsoil, SWC)
 
-# porosity, the 5th param, has to be bigger than max SWC
-porosity = maximum(SWC) + 0.01
-lb = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0] # params can't be negative
-ub = [Inf, Inf, Inf, Inf, porosity, Inf]
+poro_val = maximum(skipmissing(data.SWC_03))
+
+lb = [0.0, 0.0, 0.0, 0.0, 0.0] # params can't be negative
+ub = [Inf, Inf, Inf, Inf, Inf]
 # p0 = [1e8, 59, 3.46e-8, 2.0e-3, porosity, 0.0125] 
-p_scaled = [16.8, 65.5, 0.59, 3.15, porosity, 0.0026]
+p_scaled = [16.8, 65.5, 0.59, 3.15, 0.0026]
 
 output1 = DAMM(Ind_var, p_scaled)
 
@@ -39,6 +42,24 @@ Param_fit = coef(fit)
 
 Modeled_data = DAMM(Ind_var, Param_fit) 
 
+# We can estimate errors on the fit parameters,
+# to get standard error of each parameter:
+sigma = stderror(fit)
+# to get margin of error and confidence interval of each parameter at 5% significance level:
+margin_of_error = margin_error(fit, 0.05)
+confidence_inter = confidence_interval(fit, 0.05)
+
+# parameter covariance matrix evaluated at the best fit point
+covar = estimate_covar(fit)
+
+# Calculate RMSE, sqrt of sum of square of residuals
+
+# correlation (r2) of param from covar --> see with Julie
+
+# v1 / sqrt(diag(v1)) %*% t(sqrt(diag(v1)))
+
+# s_ij/si*sj
+
 using GLMakie, UnicodeFun
 
 fig = Figure()
@@ -51,12 +72,12 @@ L = 25 # resolution
 x = collect(range(1, length=L, stop=1))
 [append!(x, collect(range(i, length=L, stop=i))) for i = 2:25]
 x = reduce(vcat,x)
-y = collect(range(0, length=L, stop=porosity))
+y = collect(range(0, length=L, stop=poro_val))
 y = repeat(y, outer=L)
 x_range = hcat(x, y)
 
 x = Int.(x_range[:, 1])
-y_ax = collect(range(0, length=L, stop=porosity))
+y_ax = collect(range(0, length=L, stop=poro_val))
 y = collect(range(1, length=L, stop=L))
 y = repeat(y, outer=L)
 y = Int.(y)
@@ -74,4 +95,5 @@ ax3D.zlabel = to_latex("R_{soil} (\\mumol m^{-2} s^{-1})");
 
 fig
 
+# test
 
