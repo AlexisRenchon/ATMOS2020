@@ -62,10 +62,11 @@ using SparseArrays
 DAMM_Matrix = []
 y_ax = []
 
+L = 25 # resolution
+x_ax = collect(range(1, length=L, stop=L))
 for i = 1:64
 	poro_val = poro_vals[i]
 
-	L = 25 # resolution
 	xD = collect(range(1, length=L, stop=1))
 	[append!(xD, collect(range(i, length=L, stop=i))) for i = 2:25]
 	xD = reduce(vcat, xD)
@@ -78,8 +79,7 @@ for i = 1:64
 	yD = collect(range(1, length=L, stop=L))
 	yD = repeat(yD, outer=L)
 	yD = Int.(yD)
-	x_ax = collect(range(1, length=L, stop=L))
-
+	
 	push!(DAMM_Matrix, Matrix(sparse(xD, yD, DAMM(x_range, Param_fit[i]))))
 end
 
