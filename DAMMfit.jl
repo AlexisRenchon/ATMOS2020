@@ -20,6 +20,7 @@ poro_vals = []
 fit = []
 Param_fit = []
 Modeled_data = []
+poro_val = 0.4 # to avoid weird bug
 for i = 1:64
 	name_RS = string("RSM_Exp_Flux_", x[i], y[i])
 	name_SWC = string("SWC_", x[i], y[i])
@@ -51,43 +52,72 @@ covar = estimate_covar(fit[1])
 # v1 / sqrt(diag(v1)) %*% t(sqrt(diag(v1)))
 # s_ij/si*sj
 
+
+
+
+
+# saving all DAMM Matrix before plotting observable
+using SparseArrays
+
+DAMM_Matrix = []
+y_ax = []
+
+for i = 1:64
+	poro_val = poro_vals[i]
+
+	L = 25 # resolution
+	xD = collect(range(1, length=L, stop=1))
+	[append!(xD, collect(range(i, length=L, stop=i))) for i = 2:25]
+	xD = reduce(vcat, xD)
+	yD = collect(range(0, length=L, stop=poro_vals[i]))
+	yD = repeat(yD, outer=L)
+	x_range = hcat(xD, yD)
+
+	xD = Int.(x_range[:, 1])
+	push!(y_ax, collect(range(0, length=L, stop=poro_vals[i])))
+	yD = collect(range(1, length=L, stop=L))
+	yD = repeat(yD, outer=L)
+	yD = Int.(yD)
+	x_ax = collect(range(1, length=L, stop=L))
+
+	push!(DAMM_Matrix, Matrix(sparse(xD, yD, DAMM(x_range, Param_fit[i]))))
+end
+
+
+
+
 using GLMakie, UnicodeFun
 
-i = 63
-poro_val = poro_vals[i]
-
 fig = Figure()
+
+locations = [string(x[i], y[i]) for i in 1:64]
+vals = collect(1:64)
+
+menu = Menu(fig, options = zip(locations, vals))
+
+loc = Node{Any}(vals[1])
+
+data3D = @lift(Vec3f0.(Tsoil[$loc], SWC[$loc], Rsoil[$loc]))
+model3D = @lift(Vec3f0.(Tsoil[$loc], SWC[$loc], Modeled_data[$loc]))
+y_ax_N = @lift(y_ax[$loc])
+surface3D = @lift(DAMM_Matrix[$loc])
+
 ax3D = Axis3(fig[1,1])
-p3D = scatter!(ax3D, Tsoil[i], SWC[i], Rsoil[i], markersize = 5000, color = :black)
-p3Dm = scatter!(ax3D, Tsoil[i], SWC[i], Modeled_data[i], markersize = 5000, color = :red)
-
-
-L = 25 # resolution
-x = collect(range(1, length=L, stop=1))
-[append!(x, collect(range(i, length=L, stop=i))) for i = 2:25]
-x = reduce(vcat,x)
-y = collect(range(0, length=L, stop=poro_vals[i]))
-y = repeat(y, outer=L)
-x_range = hcat(x, y)
-
-x = Int.(x_range[:, 1])
-y_ax = collect(range(0, length=L, stop=poro_vals[i]))
-y = collect(range(1, length=L, stop=L))
-y = repeat(y, outer=L)
-y = Int.(y)
-x_ax = collect(range(1, length=L, stop=L))
-
-using SparseArrays
-surface!(ax3D, x_ax, y_ax, Matrix(sparse(x, y, DAMM(x_range, Param_fit[i]))), colormap = Reverse(:Spectral), transparency = true, alpha = 0.2, shading = false)
-
-wireframe!(ax3D, x_ax, y_ax, Matrix(sparse(x, y, DAMM(x_range, Param_fit[i]))), overdraw = true, transparency = true, color = (:black, 0.1));
-
-
 ax3D.xlabel = to_latex("T_{soil} (°C)");
 ax3D.ylabel = to_latex("\\theta (m^3 m^{-3})");
 ax3D.zlabel = to_latex("R_{soil} (\\mumol m^{-2} s^{-1})");
 
+p3D = scatter!(ax3D, data3D, markersize = 5000, color = :black)
+p3Dm = scatter!(ax3D, model3D, markersize = 5000, color = :red)
+surface!(ax3D, x_ax, y_ax_N, surface3D, colormap = Reverse(:Spectral), transparency = true, alpha = 0.2, shading = false)
+wireframe!(ax3D, x_ax, y_ax_N, surface3D, overdraw = true, transparency = true, color = (:black, 0.1));
+
+on(menu.selection) do s
+	loc[] = s
+	autolimits!(ax3D)
+end
+
 fig
 
-# test
+
 
