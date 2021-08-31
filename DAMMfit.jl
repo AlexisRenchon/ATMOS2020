@@ -1,4 +1,4 @@
-using DataFrames, CSV, LsqFit, Statistics, StatsMakie
+using DataFrames, CSV, LsqFit, Statistics, GLMakie
 
 data = DataFrame(CSV.File("Input/2020_v1.csv"))
 
@@ -9,9 +9,9 @@ include("DAMM_scaled_porosity.jl")
 x = [0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6,7,7,7] 
 y = [0,1,2,2,1,0,0,1,2,2,1,0,0,1,2,2,1,0,0,1,2,2,1,0,3,4,4,3,4,3,3,4,4,3,3,4,4,3,4,3,5,6,7,7,6,5,5,6,7,7,6,5,5,6,7,7,6,5,5,6,7,7,6,5] 
 
-lb = [0.0, 0.0, 0.0, 0.0, 0.0] # params can't be negative
-ub = [Inf, Inf, Inf, Inf, Inf] 
-p_scaled = [16.8, 65.5, 0.59, 3.15, 0.0026]
+lb = [0.0, 0.0, 0.0] # params can't be negative
+ub = [Inf, Inf, Inf] 
+p_scaled = [1.7, 5.9, 3.15]
 
 SWC = []
 Tsoil = []
@@ -42,8 +42,10 @@ end
 # means
 # Average and median SWC for each location
 meansSWC = []
-[push!(meansSWC, mean(skipmissing(data[:, i]))) for i = 2:65]
-#[push!(meansSWC, mean(data[:, i])) for i = 2:65]
+# [push!(meansSWC, mean(skipmissing(data[:, i]))) for i = 2:65]
+[push!(meansSWC, mean(data[:, i])) for i = 2:65]
+replace!(meansSWC, missing => NaN)
+
 
 # Elevation on locations, joinleft?
 data2 = DataFrame(CSV.File("Input/FieldCoordinates_c.csv"))
@@ -53,10 +55,8 @@ data2.loc = @. string(data2.ChamberX, data2.ChamberY)
 df_p = DataFrame("x" => x,
 		 "y" => y,
 		 "a" => [Param_fit[i][1] for i = 1:64],
-		"Ea" => [Param_fit[i][2] for i = 1:64],
-		"kMsx" => [Param_fit[i][3] for i = 1:64],
-		"kMo2" => [Param_fit[i][4] for i = 1:64],
-		"sx" => [Param_fit[i][5] for i = 1:64],
+		"kMsx" => [Param_fit[i][2] for i = 1:64],
+		"kMo2" => [Param_fit[i][3] for i = 1:64],
 		"SWCmean" => meansSWC)
 df_p.loc = @. string(x, y)
 
@@ -76,13 +76,13 @@ fig
 fig = Figure()
 ax = Axis(fig[1, 1], xlabel = "mean SWC", ylabel = "kMO2")
 plot!(Float64.(test.SWCmean), test.kMo2)
-ylims!(-0.1, 2)
+#ylims!(-0.1, 2)
 fig
 
 fig = Figure()
 ax = Axis(fig[1, 1], xlabel = "mean SWC", ylabel = "kMsx")
 plot!(Float64.(test.SWCmean), test.kMsx)
-ylims!(-0.1, 2)
+#ylims!(-0.1, 2)
 fig
 
 # We can estimate errors on the fit parameters,
