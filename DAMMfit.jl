@@ -1,4 +1,4 @@
-using DataFrames, CSV, LsqFit
+using DataFrames, CSV, LsqFit, Statistics, StatsMakie
 
 data = DataFrame(CSV.File("Input/2020_v1.csv"))
 
@@ -38,6 +38,52 @@ for i = 1:64
 	push!(Param_fit, coef(fit[i]))
 	push!(Modeled_data, DAMM(Ind_var, Param_fit[i]))
 end
+
+# means
+# Average and median SWC for each location
+meansSWC = []
+[push!(meansSWC, mean(skipmissing(data[:, i]))) for i = 2:65]
+#[push!(meansSWC, mean(data[:, i])) for i = 2:65]
+
+# Elevation on locations, joinleft?
+data2 = DataFrame(CSV.File("Input/FieldCoordinates_c.csv"))
+data2.loc = @. string(data2.ChamberX, data2.ChamberY)
+
+# param dataframe
+df_p = DataFrame("x" => x,
+		 "y" => y,
+		 "a" => [Param_fit[i][1] for i = 1:64],
+		"Ea" => [Param_fit[i][2] for i = 1:64],
+		"kMsx" => [Param_fit[i][3] for i = 1:64],
+		"kMo2" => [Param_fit[i][4] for i = 1:64],
+		"sx" => [Param_fit[i][5] for i = 1:64],
+		"SWCmean" => meansSWC)
+df_p.loc = @. string(x, y)
+
+test = innerjoin(data2, df_p, on = :loc)
+
+CSV.write(joinpath("Output", "params.csv"), df_p)
+CSV.write(joinpath("Output", "test.csv"), test)
+
+fig = Figure()
+ax = Axis(fig[1, 1], xlabel = "Elevation (m)", ylabel = "Mean SWC (m3 m-3)")
+plot!(test.OrthoHeight, Float64.(test.SWCmean))
+fig
+
+# how to plot linear regression in Makie?
+# plot(linear, Float64.(test.SWCmean), test.OrthoHeight)
+
+fig = Figure()
+ax = Axis(fig[1, 1], xlabel = "mean SWC", ylabel = "kMO2")
+plot!(Float64.(test.SWCmean), test.kMo2)
+ylims!(-0.1, 2)
+fig
+
+fig = Figure()
+ax = Axis(fig[1, 1], xlabel = "mean SWC", ylabel = "kMsx")
+plot!(Float64.(test.SWCmean), test.kMsx)
+ylims!(-0.1, 2)
+fig
 
 # We can estimate errors on the fit parameters,
 # to get standard error of each parameter:
@@ -119,5 +165,32 @@ end
 
 fig
 
+# plot individual figures
+
+
+for i = 1:64
+	fig = Figure()
+
+	data3D = Vec3f0.(Tsoil[i], SWC[i], Rsoil[i])
+	model3D = Vec3f0.(Tsoil[i], SWC[i], Modeled_data[i])
+	y_ax_N = y_ax[i]
+	surface3D = DAMM_Matrix[i]
+
+	ax3D = Axis3(fig[1,1])
+	ax3D.xlabel = to_latex("T_{soil} (°C)");
+	ax3D.ylabel = to_latex("\\theta (m^3 m^{-3})");
+	ax3D.zlabel = to_latex("R_{soil} (\\mumol m^{-2} s^{-1})");
+
+	p3D = scatter!(ax3D, data3D, markersize = 5000, color = :black)
+	p3Dm = scatter!(ax3D, model3D, markersize = 5000, color = :red)
+	surface!(ax3D, x_ax, y_ax_N, surface3D, colormap = Reverse(:Spectral), transparency = true, alpha = 0.2, shading = false)
+	wireframe!(ax3D, x_ax, y_ax_N, surface3D, overdraw = true, transparency = true, color = (:black, 0.1));
+	name = string("location_", locations[i], ".png")
+
+	ylims!(0, 0.45)
+	zlims!(0,25)
+
+	save(joinpath("Output", "Individual plots DAMM", name), fig)
+end
 
 
